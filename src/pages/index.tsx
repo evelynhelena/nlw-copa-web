@@ -1,13 +1,40 @@
-/* interface HomeProps {
-  count: number;
-} */
-import Image from 'next/image'
-import appPreviewImg from '../assets/app-nlw-copa-preview.png'
-import logoImg from '../assets/logo.svg'
-import usersAvatarExempleImage from '../assets/users-avatar-exemple.png'
-import iconCheckImage from '../assets/icon-check.svg'
+import Image from 'next/image';
+import appPreviewImg from '../assets/app-nlw-copa-preview.png';
+import logoImg from '../assets/logo.svg';
+import usersAvatarExempleImage from '../assets/users-avatar-exemple.png';
+import iconCheckImage from '../assets/icon-check.svg';
+import { api } from '../lib/axios';
+import { FormEvent, useState } from 'react';
+import { GetStaticProps } from 'next';
 
-export default function Home() {
+interface HomeProps {
+  poolCount: number;
+  guessCount: number;
+  userCount: number;
+}
+
+export default function Home({ poolCount, guessCount, userCount }: HomeProps) {
+
+  const [poolText, setPoolText] = useState<string>('');
+
+  async function createPool(event: FormEvent) {
+    event.preventDefault();
+
+    try {
+      const responde = await api.post('/pools', {
+        title: poolText,
+      })
+
+      const { code } = responde.data;
+      await navigator.clipboard.writeText(code);
+      alert('Bolão Criando com sucesso, o codigo foi copiado para a área de transferencia');
+      setPoolText('');
+    } catch (err) {
+      console.log(err);
+      alert('Falha ao criar o bolao')
+    }
+  }
+
   return (
     <div className="max-w-[1124px] h-screen mx-auto grid grid-cols-2 gap-28 items-center">
       <main>
@@ -20,16 +47,18 @@ export default function Home() {
         <div className="mt-10 flex items-center gap-2">
           <Image src={usersAvatarExempleImage} alt="Imagens de avatar" />
           <strong className="text-gray-100 text-xl">
-            <span className="text-ignite-500">+12.592 </span>
+            <span className="text-ignite-500">+{userCount} </span>
             pessoas já estão usando
           </strong>
         </div>
 
-        <form className="mt-10 flex gap-2">
+        <form className="mt-10 flex gap-2" onSubmit={createPool}>
           <input
-            className="flex-1 px-6 py-4 rounded bg-gray-800 border border-gray-600 text-sm"
+            className="flex-1 px-6 py-4 rounded bg-gray-800 border border-gray-600 text-sm text-gray-100  "
             type="text"
             placeholder="Qual nome do seu bolão?"
+            value={poolText}
+            onChange={({ target }) => setPoolText(target.value)}
           />
           <button
             type="submit"
@@ -48,18 +77,18 @@ export default function Home() {
             <Image src={iconCheckImage} alt="icone de check" />
 
             <div className="flex flex-col">
-              <span className="font-bold text-2xl">+2.034</span>
+              <span className="font-bold text-2xl">+{poolCount}</span>
               <span>Bolões criados </span>
             </div>
           </div>
 
-          <div className="w-px h-14 bg-gray-600"/>
+          <div className="w-px h-14 bg-gray-600" />
 
           <div className="flex items-center gap-6">
             <Image src={iconCheckImage} alt="icone de check" />
 
             <div className="flex flex-col">
-              <span className="font-bold text-2xl">+192.847</span>
+              <span className="font-bold text-2xl">+{guessCount}</span>
               <span>Palpites enviados</span>
             </div>
           </div>
@@ -74,13 +103,23 @@ export default function Home() {
   )
 }
 
-/* export const getServerSideProps = async () => {
-  const reponse = await fetch('http://localhost:3333/pools/count');
-  const data = await reponse.json();
+export const getStaticProps: GetStaticProps = async () => {
+
+  const [
+    poolCountResponse,
+    guessCountResponse,
+    userCountResponse
+  ] = await Promise.all([
+    api.get('pools/count'),
+    api.get('guesses/count'),
+    api.get('users/count'),
+  ])
 
   return {
     props: {
-      count: data.count
+      poolCount: poolCountResponse.data.count,
+      guessCount: guessCountResponse.data.count,
+      userCount: userCountResponse.data.count,
     }
   }
-} */
+} 
